@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Run Scheduler 🏃‍♂️
 
 A deterministic weekly training planner for marathon runners, featuring intelligent quality session scheduling around Sunday long runs.
@@ -82,3 +83,6 @@ Built with:
 ## License
 
 MIT
+=======
+# RunScheduler
+>>>>>>> 51ad8ccffa15412bbef2bf7e38b890cb8c1dfe06

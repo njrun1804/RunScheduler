@@ -3,3 +3,9 @@ dist/
 coverage/
 *.log
 .DS_Store
+.env
+.venv
+build/
+*.egg-info/
+__pycache__/
+.vscode/
