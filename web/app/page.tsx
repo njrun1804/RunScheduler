@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { planWeek, type PlanInput, type PlanResult, type LongKey } from '@/lib/planner-adapter';
 import { LongRunConfig } from '@/components/LongRunConfig';
 import { QualitySelector } from '@/components/QualitySelector';
 import { WeekGrid } from '@/components/WeekGrid';
 import { PlanSummary } from '@/components/PlanSummary';
+import { StatsBar } from '@/components/StatsBar';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { RefreshCw, Github } from 'lucide-react';
 
@@ -13,27 +14,24 @@ export default function Home() {
   const [longType, setLongType] = useState<LongKey>('easy');
   const [longDistance, setLongDistance] = useState(16);
   const [selectedQualities, setSelectedQualities] = useState<string[]>([]);
-  const [result, setResult] = useState<PlanResult | null>(null);
-  const [input, setInput] = useState<PlanInput | null>(null);
 
-  // Calculate plan whenever inputs change
-  useEffect(() => {
-    if (selectedQualities.length > 0 || result) {
-      const newInput: PlanInput = {
-        longType,
-        longDistanceMi: longDistance,
-        qualitySelections: selectedQualities
-      };
-      const newResult = planWeek(newInput);
-      setResult(newResult);
-      setInput(newInput);
+  // Calculate plan whenever inputs change (using useMemo to avoid derived state)
+  const { input, result } = useMemo(() => {
+    if (selectedQualities.length === 0) {
+      return { input: null, result: null };
     }
+
+    const planInput: PlanInput = {
+      longType,
+      longDistanceMi: longDistance,
+      qualitySelections: selectedQualities
+    };
+    const planResult = planWeek(planInput);
+    return { input: planInput, result: planResult };
   }, [longType, longDistance, selectedQualities]);
 
   const handleReset = () => {
     setSelectedQualities([]);
-    setResult(null);
-    setInput(null);
   };
 
   return (
@@ -54,7 +52,7 @@ export default function Home() {
             <div className="flex items-center gap-3">
               <button
                 onClick={handleReset}
-                className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all hover:scale-110 active:scale-95"
                 aria-label="Reset"
               >
                 <RefreshCw className="h-5 w-5" />
@@ -63,7 +61,7 @@ export default function Home() {
                 href="https://github.com/njrun1804/RunScheduler"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all hover:scale-110 active:scale-95"
                 aria-label="GitHub"
               >
                 <Github className="h-5 w-5" />
@@ -93,6 +91,7 @@ export default function Home() {
 
           {/* Right Column - Results */}
           <div className="lg:col-span-2 space-y-6">
+            <StatsBar input={input} result={result} />
             <WeekGrid result={result} longType={longType} />
             <PlanSummary input={input} result={result} />
           </div>

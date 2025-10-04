@@ -46,13 +46,15 @@ This ensures constraint satisfaction for all neighbors, not just chronological o
 ### Quality Catalog
 
 | Quality Type | Before | After | Weight | Description |
-|-------------|--------|-------|---------|-------------|
-| Threshold | 1 | 1 | 2 | T reps or ≤30′ continuous |
-| Threshold Alternations | 2 | 2 | 4 | 1k T / 1k steady ×4-6 |
-| CV / 10k | 1 | 1 | 2 | 4-6×1k at 10k pace |
-| VO₂ Micro | 1 | 1 | 2 | 30/30s intervals |
-| VO₂ Classic | 2 | 2 | 4 | 5×1k or 6×800 @ 5k |
-| Steady | 0 | 0 | 1 | High Z2/low Z3 |
+|-------------|--------|-------|--------|-------------|
+| Medium-long easy (90–105′) | 0 | 1 | 1 | Extended aerobic run with next-day easy buffer |
+| Threshold (split or 25–40′ continuous) | 1 | 1 | 2 | Cruise reps or continuous steady state |
+| Fartlek / medium hills (e.g., 1′/1′ × 30–40′) | 1 | 1 | 2 | Rolling fartlek or moderate hill session |
+| VO₂ micro (30/30s, 12–18′ on-time) | 1 | 1 | 2 | Short VO₂ alternations capped near 18′ |
+| MP (alternations, ~30–45′ MP total) | 2 | 2 | 4 | Marathon pace alternations totalling 30–45′ |
+| VO₂ big (e.g., 5×1k or 6×800 @ ~5k) | 2 | 2 | 4 | Classic VO₂ session with full 5k reps |
+| MP big (continuous ≥45′ at MP) | 2 | 3 | 5 | Extended continuous marathon pace effort |
+| Long progression / MP-lite finish (last 15–25′ steady/MP-lite) | 2 | 2 | 4 | Long run finishing with steady or MP-lite segment |
 
 ### Test Coverage
 25 comprehensive Jest tests covering:

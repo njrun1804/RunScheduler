@@ -80,7 +80,10 @@ describe('planWeek - Example A: Long Easy with 2 qualities', () => {
   const input: PlanInput = {
     longType: 'easy',
     longDistanceMi: 16,
-    qualitySelections: ['Threshold (cruise/split/≤30′)', 'CV / 10k (4–6×1k)'],
+    qualitySelections: [
+      'Threshold (split or 25–40′ continuous)',
+      'VO₂ micro (30/30s, 12–18′ on-time)',
+    ],
   };
 
   it('should produce correct viable days', () => {
@@ -92,11 +95,11 @@ describe('planWeek - Example A: Long Easy with 2 qualities', () => {
     const result = planWeek(input);
     expect(result.warnings).toEqual([]);
 
-    // Both have weight=2, so order by selection index: Threshold first, CV second
+    // Both have weight=2, so order by selection index: Threshold first, VO₂ micro second
     // Threshold (1/1) can go on Tue (Mon is blocked, Tue has no conflicts)
-    // CV (1/1) needs 1 gap from Threshold, so earliest is Thu
-    expect(result.schedule[1]).toBe('Threshold (cruise/split/≤30′)'); // Tue
-    expect(result.schedule[3]).toBe('CV / 10k (4–6×1k)'); // Thu
+    // VO₂ micro (1/1) needs 1 gap from Threshold, so earliest is Thu
+    expect(result.schedule[1]).toBe('Threshold (split or 25–40′ continuous)'); // Tue
+    expect(result.schedule[3]).toBe('VO₂ micro (30/30s, 12–18′ on-time)'); // Thu
   });
 });
 
@@ -104,7 +107,10 @@ describe('planWeek - Example B: MP Long with 2 qualities', () => {
   const input: PlanInput = {
     longType: 'mp',
     longDistanceMi: 20,
-    qualitySelections: ['Threshold Alternations', 'VO₂ Micro (30/30s)'],
+    qualitySelections: [
+      'MP (alternations, ~30–45′ MP total)',
+      'VO₂ micro (30/30s, 12–18′ on-time)',
+    ],
   };
 
   it('should have only Thursday viable', () => {
@@ -115,10 +121,10 @@ describe('planWeek - Example B: MP Long with 2 qualities', () => {
   it('should place only one session and warn about the other', () => {
     const result = planWeek(input);
 
-    // Threshold Alternations (weight=4) > VO₂ Micro (weight=2), so placed first
-    expect(result.schedule[3]).toBe('Threshold Alternations'); // Thu
+    // MP alternations (weight=4) > VO₂ micro (weight=2), so placed first
+    expect(result.schedule[3]).toBe('MP (alternations, ~30–45′ MP total)'); // Thu
     expect(result.warnings).toHaveLength(1);
-    expect(result.warnings[0]).toContain('VO₂ Micro (30/30s)');
+    expect(result.warnings[0]).toContain('VO₂ micro (30/30s, 12–18′ on-time)');
   });
 });
 
@@ -126,7 +132,10 @@ describe('planWeek - Example C: Auto-upgrade to Big Easy', () => {
   const input: PlanInput = {
     longType: 'easy',
     longDistanceMi: 22, // triggers upgrade to big (2/2)
-    qualitySelections: ['CV / 10k (4–6×1k)', 'VO₂ Micro (30/30s)'],
+    qualitySelections: [
+      'Fartlek / medium hills (e.g., 1′/1′ × 30–40′)',
+      'VO₂ micro (30/30s, 12–18′ on-time)',
+    ],
   };
 
   it('should block days as Big Easy (2/2)', () => {
@@ -137,10 +146,10 @@ describe('planWeek - Example C: Auto-upgrade to Big Easy', () => {
   it('should place one session and warn about the other', () => {
     const result = planWeek(input);
 
-    // Both weight=2, CV selected first
-    expect(result.schedule[2]).toBe('CV / 10k (4–6×1k)'); // Wed
+    // Both weight=2, Fartlek selected first
+    expect(result.schedule[2]).toBe('Fartlek / medium hills (e.g., 1′/1′ × 30–40′)'); // Wed
     expect(result.warnings).toHaveLength(1);
-    expect(result.warnings[0]).toContain('VO₂ Micro (30/30s)');
+    expect(result.warnings[0]).toContain('VO₂ micro (30/30s, 12–18′ on-time)');
   });
 });
 
@@ -149,7 +158,7 @@ describe('planWeek - Lead-in window validation', () => {
     const input: PlanInput = {
       longType: 'easy',
       longDistanceMi: 16,
-      qualitySelections: ['VO₂ Classic (5×1k or 6×800)'], // before=2
+      qualitySelections: ['VO₂ big (e.g., 5×1k or 6×800 @ ~5k)'], // before=2
     };
 
     const result = planWeek(input);
@@ -163,21 +172,21 @@ describe('planWeek - Lead-in window validation', () => {
     // So it should try Wed (d=2): needs d-1=Tue, d-2=Mon. Both exist, neither has quality.
 
     expect(result.schedule[1]).toBeUndefined(); // Tue should fail
-    expect(result.schedule[2]).toBe('VO₂ Classic (5×1k or 6×800)'); // Wed should work
+    expect(result.schedule[2]).toBe('VO₂ big (e.g., 5×1k or 6×800 @ ~5k)'); // Wed should work
   });
 
   it('should allow placement when lead-in uses blocked days', () => {
     const input: PlanInput = {
       longType: 'progressive', // 2/2: blocks Fri, Sat, Sun, Mon, Tue
       longDistanceMi: 18,
-      qualitySelections: ['Threshold (cruise/split/≤30′)'], // before=1, after=1
+      qualitySelections: ['Threshold (split or 25–40′ continuous)'], // before=1, after=1
     };
 
     const result = planWeek(input);
 
     // Viable: Wed, Thu
     // Wed (d=2): needs d-1=Tue (blocked, no quality) -> OK
-    expect(result.schedule[2]).toBe('Threshold (cruise/split/≤30′)'); // Wed
+    expect(result.schedule[2]).toBe('Threshold (split or 25–40′ continuous)'); // Wed
   });
 });
 
@@ -187,28 +196,23 @@ describe('planWeek - Neighbor spacing enforcement', () => {
       longType: 'easy', // blocks Sat, Sun, Mon
       longDistanceMi: 16,
       qualitySelections: [
-        'VO₂ Classic (5×1k or 6×800)', // weight=4, before=2, after=2
-        'Steady 20–40′',                // weight=1, before=0, after=0
+        'MP big (continuous ≥45′ at MP)', // weight=5, before=2, after=3
+        'Medium-long easy (90–105′)',     // weight=1, before=0, after=1
       ],
     };
 
     const result = planWeek(input);
 
-    // VO₂ Classic placed first (higher weight)
-    // Earliest for VO₂: Wed (d=2) - needs 2 before (Tue, Mon both exist and no quality)
-    // Steady (weight=1): can it go on Tue?
-    //   - Left neighbor check: none
-    //   - Right neighbor: VO₂ on Wed. Gap = (2-1-1)=0, needs max(0, 2)=2. FAILS.
-    // Can it go on Thu?
-    //   - Left: VO₂ on Wed. Gap = (3-2-1)=0, needs max(2, 0)=2. FAILS.
-    // Can it go on Fri?
-    //   - Left: VO₂ on Wed. Gap = (4-2-1)=1, needs max(2, 0)=2. FAILS.
+    // MP big placed first (highest weight)
+    // Earliest for MP big: Wed (d=2) - needs 2 before (Tue, Mon both exist and no quality)
+    // Medium-long easy (weight=1):
+    //   Tue? right neighbor spacing vs MP big requires >= max(1,2)=2 easy days -> gap=0, fails
+    //   Thu? gap=(3-2-1)=0, needs max(1,3)=3 -> fails
+    //   Fri? gap=(4-2-1)=1, needs 3 -> fails
 
-    // So Steady cannot be placed anywhere due to VO₂'s after=2 requirement
-
-    expect(result.schedule[2]).toBe('VO₂ Classic (5×1k or 6×800)'); // Wed
+    expect(result.schedule[2]).toBe('MP big (continuous ≥45′ at MP)'); // Wed
     expect(result.warnings).toHaveLength(1);
-    expect(result.warnings[0]).toContain('Steady 20–40′');
+    expect(result.warnings[0]).toContain('Medium-long easy (90–105′)');
   });
 
   it('should allow placement when spacing is satisfied', () => {
@@ -216,8 +220,8 @@ describe('planWeek - Neighbor spacing enforcement', () => {
       longType: 'easy', // blocks Sat, Sun, Mon; viable: Tue, Wed, Thu, Fri
       longDistanceMi: 16,
       qualitySelections: [
-        'Threshold (cruise/split/≤30′)', // weight=2, before=1, after=1
-        'CV / 10k (4–6×1k)',             // weight=2, before=1, after=1
+        'Threshold (split or 25–40′ continuous)', // weight=2, before=1, after=1
+        'Fartlek / medium hills (e.g., 1′/1′ × 30–40′)', // weight=2, before=1, after=1
       ],
     };
 
@@ -228,8 +232,8 @@ describe('planWeek - Neighbor spacing enforcement', () => {
     // CV on Wed (d=2)?: Left=Tue. Gap=(2-1-1)=0, needs max(1,1)=1. FAILS.
     // CV on Thu (d=3)?: Left=Tue. Gap=(3-1-1)=1, needs max(1,1)=1. OK.
 
-    expect(result.schedule[1]).toBe('Threshold (cruise/split/≤30′)'); // Tue
-    expect(result.schedule[3]).toBe('CV / 10k (4–6×1k)'); // Thu
+    expect(result.schedule[1]).toBe('Threshold (split or 25–40′ continuous)'); // Tue
+    expect(result.schedule[3]).toBe('Fartlek / medium hills (e.g., 1′/1′ × 30–40′)'); // Thu
     expect(result.warnings).toEqual([]);
   });
 });
@@ -240,9 +244,9 @@ describe('planWeek - Determinism tests', () => {
       longType: 'progressive',
       longDistanceMi: 18,
       qualitySelections: [
-        'Aerobic Fartlek 1′/1′',
-        'Long Hills 60–90″',
-        'Threshold (cruise/split/≤30′)',
+        'Fartlek / medium hills (e.g., 1′/1′ × 30–40′)',
+        'Long progression / MP-lite finish (last 15–25′ steady/MP-lite)',
+        'Threshold (split or 25–40′ continuous)',
       ],
     };
 
@@ -259,9 +263,9 @@ describe('planWeek - Determinism tests', () => {
       longType: 'easy',
       longDistanceMi: 16,
       qualitySelections: [
-        'Aerobic Fartlek 1′/1′',        // weight=2
-        'Threshold (cruise/split/≤30′)', // weight=2
-        'CV / 10k (4–6×1k)',            // weight=2
+        'Fartlek / medium hills (e.g., 1′/1′ × 30–40′)', // weight=2
+        'Threshold (split or 25–40′ continuous)',         // weight=2
+        'VO₂ micro (30/30s, 12–18′ on-time)',             // weight=2
       ],
     };
 
@@ -273,8 +277,8 @@ describe('planWeek - Determinism tests', () => {
     // Threshold second (idx=1): Thu (needs 1 gap from Tue)
     // CV third (idx=2): cannot fit (would need Sat, but Sat is blocked)
 
-    expect(result.schedule[1]).toBe('Aerobic Fartlek 1′/1′'); // Tue
-    expect(result.schedule[3]).toBe('Threshold (cruise/split/≤30′)'); // Thu
+    expect(result.schedule[1]).toBe('Fartlek / medium hills (e.g., 1′/1′ × 30–40′)'); // Tue
+    expect(result.schedule[3]).toBe('Threshold (split or 25–40′ continuous)'); // Thu
   });
 });
 
@@ -296,11 +300,11 @@ describe('planWeek - Edge cases', () => {
     const input: PlanInput = {
       longType: 'easy',
       longDistanceMi: 16,
-      qualitySelections: ['Unknown Quality', 'Threshold (cruise/split/≤30′)'],
+      qualitySelections: ['Unknown Quality', 'Threshold (split or 25–40′ continuous)'],
     };
 
     const result = planWeek(input);
-    expect(result.schedule[1]).toBe('Threshold (cruise/split/≤30′)');
+    expect(result.schedule[1]).toBe('Threshold (split or 25–40′ continuous)');
     expect(Object.keys(result.schedule)).toHaveLength(1);
   });
 

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { getAllQualities, type QualityDisplay } from '@/lib/planner-adapter';
 import * as Checkbox from '@radix-ui/react-checkbox';
 import { Check, Search, Zap, Flame, Activity } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface QualitySelectorProps {
   selectedQualities: string[];
@@ -65,53 +66,72 @@ export function QualitySelector({ selectedQualities, onQualitiesChange }: Qualit
 
       {/* Quality List */}
       <div className="space-y-2 max-h-96 overflow-y-auto">
-        {filteredQualities.map((quality) => (
-          <label
-            key={quality.key}
-            className={`block p-3 rounded-lg border cursor-pointer transition-all ${
-              selectedQualities.includes(quality.key)
-                ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700'
-                : 'bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'
-            }`}
-          >
-            <div className="flex items-start gap-3">
-              <Checkbox.Root
-                checked={selectedQualities.includes(quality.key)}
-                onCheckedChange={() => toggleQuality(quality.key)}
-                className="mt-1 h-5 w-5 rounded border-2 border-gray-300 dark:border-gray-500 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
-              >
-                <Checkbox.Indicator>
-                  <Check className="h-3 w-3 text-white" />
-                </Checkbox.Indicator>
-              </Checkbox.Root>
+        <AnimatePresence>
+          {filteredQualities.map((quality, index) => (
+            <motion.label
+              key={quality.key}
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              transition={{ delay: index * 0.02, duration: 0.2 }}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className={`block p-3 rounded-lg border cursor-pointer transition-all ${
+                selectedQualities.includes(quality.key)
+                  ? 'bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border-blue-300 dark:border-blue-700 shadow-md'
+                  : 'bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 hover:shadow-sm'
+              }`}
+            >
+              <div className="flex items-start gap-3">
+                <Checkbox.Root
+                  checked={selectedQualities.includes(quality.key)}
+                  onCheckedChange={() => toggleQuality(quality.key)}
+                  className="mt-1 h-5 w-5 rounded border-2 border-gray-300 dark:border-gray-500 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600 transition-all"
+                >
+                  <Checkbox.Indicator>
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ type: "spring", stiffness: 500, damping: 25 }}
+                    >
+                      <Check className="h-3 w-3 text-white" />
+                    </motion.div>
+                  </Checkbox.Indicator>
+                </Checkbox.Root>
 
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-sm font-medium text-gray-900 dark:text-white">
-                    {quality.emoji} {quality.label}
-                  </span>
-                  {getIntensityIcon(quality.weight)}
-                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-sm font-medium text-gray-900 dark:text-white">
+                      {quality.emoji} {quality.label}
+                    </span>
+                    <motion.div
+                      animate={{ rotate: selectedQualities.includes(quality.key) ? 360 : 0 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      {getIntensityIcon(quality.weight)}
+                    </motion.div>
+                  </div>
 
-                {quality.description && (
-                  <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">{quality.description}</p>
-                )}
+                  {quality.description && (
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">{quality.description}</p>
+                  )}
 
-                <div className="flex gap-3 text-xs">
-                  <span className="inline-flex items-center px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-300">
-                    {quality.before} before
-                  </span>
-                  <span className="inline-flex items-center px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-300">
-                    {quality.after} after
-                  </span>
-                  <span className="inline-flex items-center px-2 py-1 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400">
-                    {getIntensityLabel(quality.weight)}
-                  </span>
+                  <div className="flex gap-3 text-xs">
+                    <span className="inline-flex items-center px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-300">
+                      {quality.before} before
+                    </span>
+                    <span className="inline-flex items-center px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-300">
+                      {quality.after} after
+                    </span>
+                    <span className="inline-flex items-center px-2 py-1 rounded-full bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 text-purple-700 dark:text-purple-400 font-medium">
+                      {getIntensityLabel(quality.weight)}
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
-          </label>
-        ))}
+            </motion.label>
+          ))}
+        </AnimatePresence>
       </div>
 
       {filteredQualities.length === 0 && (

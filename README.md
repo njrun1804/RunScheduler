@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Run Scheduler 🏃‍♂️
 
 A deterministic weekly training planner for marathon runners, featuring intelligent quality session scheduling around Sunday long runs.
@@ -59,10 +58,18 @@ Each quality has:
 - `after`: Required recovery days after
 - `weight`: Priority/intensity level
 
-Examples:
-- **Threshold**: 1 before, 1 after, weight 2
-- **VO₂ Classic**: 2 before, 2 after, weight 4
-- **Steady**: 0 before, 0 after, weight 1
+Current catalog:
+
+| Session | Before | After | Weight |
+| --- | ---: | ---: | ---: |
+| Medium-long easy (90–105′) | 0 | 1 | 1 |
+| Threshold (split or 25–40′ continuous) | 1 | 1 | 2 |
+| Fartlek / medium hills (e.g., 1′/1′ × 30–40′) | 1 | 1 | 2 |
+| VO₂ micro (30/30s, 12–18′ on-time) | 1 | 1 | 2 |
+| MP (alternations, ~30–45′ MP total) | 2 | 2 | 4 |
+| VO₂ big (e.g., 5×1k or 6×800 @ ~5k) | 2 | 2 | 4 |
+| MP big (continuous ≥45′ at MP) | 2 | 3 | 5 |
+| Long progression / MP-lite finish (last 15–25′ steady/MP-lite) | 2 | 2 | 4 |
 
 ## Long Run Types
 
@@ -83,6 +90,3 @@ Built with:
 ## License
 
 MIT
-=======
-# RunScheduler
->>>>>>> 51ad8ccffa15412bbef2bf7e38b890cb8c1dfe06

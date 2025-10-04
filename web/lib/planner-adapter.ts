@@ -91,7 +91,8 @@ export function getAllQualities(): QualityDisplay[] {
 // Calculate weekly training stress (simple heuristic)
 export function calculateWeeklyLoad(
   schedule: Partial<Record<DayIndex, string>>,
-  longType: LongKey
+  longType: LongKey,
+  result?: PlanResult
 ): number {
   let load = 0;
 
@@ -103,6 +104,9 @@ export function calculateWeeklyLoad(
     }
   });
 
+  // Use effective long type if available (from auto-upgrade)
+  const effectiveType = result?.effectiveLongType || longType;
+
   // Add long run load
   const longLoad = {
     easy: 15,
@@ -111,7 +115,7 @@ export function calculateWeeklyLoad(
     big: 30,
     mp: 35
   };
-  load += longLoad[longType];
+  load += longLoad[effectiveType];
 
   return load;
 }
@@ -120,7 +124,8 @@ export function calculateWeeklyLoad(
 export function exportToICS(
   schedule: Partial<Record<DayIndex, string>>,
   longType: LongKey,
-  startDate: Date = new Date()
+  startDate: Date = new Date(),
+  result?: PlanResult
 ): string {
   const events: string[] = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//RunScheduler//EN'];
 
@@ -143,10 +148,13 @@ export function exportToICS(
     events.push('END:VEVENT');
   });
 
+  // Use effective long type if available (from auto-upgrade)
+  const effectiveType = result?.effectiveLongType || longType;
+
   // Add Sunday long run
   const sunday = new Date(startDate);
   sunday.setDate(sunday.getDate() + (7 - sunday.getDay()));
-  const longLabel = LONG_RULES[longType].label;
+  const longLabel = LONG_RULES[effectiveType].label;
 
   events.push('BEGIN:VEVENT');
   events.push(`DTSTART:${formatDate(sunday)}`);
@@ -194,4 +202,91 @@ export function loadPlans(): SavedPlan[] {
 export function deletePlan(id: string): void {
   const plans = loadPlans().filter(p => p.id !== id);
   localStorage.setItem('runSchedulerPlans', JSON.stringify(plans));
+}
+
+// Export week as text
+export function formatWeekAsText(
+  schedule: Partial<Record<DayIndex, string>>,
+  longType: LongKey,
+  longDistanceMi: number,
+  result?: PlanResult
+): string {
+  const effectiveType = result?.effectiveLongType || longType;
+  const longLabel = LONG_RULES[effectiveType].label;
+
+  const lines = [
+    '📅 WEEKLY TRAINING PLAN',
+    '=' . repeat(50),
+    ''
+  ];
+
+  // Add each day
+  DAYS.forEach((dayName, index) => {
+    const day = index as DayIndex;
+
+    if (day === 6) {
+      lines.push(`${dayName}: ${longLabel} (${longDistanceMi} mi)`);
+    } else {
+      const quality = schedule[day];
+      if (quality) {
+        lines.push(`${dayName}: ${quality}`);
+      } else {
+        const status = getDayStatus(day, schedule, result?.viableDays || []);
+        if (status === 'blocked') {
+          lines.push(`${dayName}: Recovery (blocked)`);
+        } else {
+          lines.push(`${dayName}: Easy run`);
+        }
+      }
+    }
+  });
+
+  lines.push('');
+  lines.push('Generated with RunScheduler 🏃‍♂️');
+
+  return lines.join('\n');
+}
+
+// Export week as markdown
+export function formatWeekAsMarkdown(
+  schedule: Partial<Record<DayIndex, string>>,
+  longType: LongKey,
+  longDistanceMi: number,
+  result?: PlanResult
+): string {
+  const effectiveType = result?.effectiveLongType || longType;
+  const longLabel = LONG_RULES[effectiveType].label;
+
+  const lines = [
+    '# 📅 Weekly Training Plan',
+    '',
+    '| Day | Workout |',
+    '| --- | --- |'
+  ];
+
+  // Add each day
+  DAYS.forEach((dayName, index) => {
+    const day = index as DayIndex;
+
+    if (day === 6) {
+      lines.push(`| **${dayName}** | ${longLabel} (${longDistanceMi} mi) |`);
+    } else {
+      const quality = schedule[day];
+      if (quality) {
+        lines.push(`| **${dayName}** | ${quality} |`);
+      } else {
+        const status = getDayStatus(day, schedule, result?.viableDays || []);
+        if (status === 'blocked') {
+          lines.push(`| ${dayName} | Recovery (blocked) |`);
+        } else {
+          lines.push(`| ${dayName} | Easy run |`);
+        }
+      }
+    }
+  });
+
+  lines.push('');
+  lines.push('_Generated with RunScheduler 🏃‍♂️_');
+
+  return lines.join('\n');
 }

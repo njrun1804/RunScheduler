@@ -1,12 +1,13 @@
 'use client';
 
-import { DAYS, getDayStatus, getEffortEmoji, type DayIndex, type PlanResult } from '@/lib/planner-adapter';
+import { DAYS, getDayStatus, getEffortEmoji, LONG_RULES, type DayIndex, type PlanResult } from '@/lib/planner-adapter';
 import * as Tooltip from '@radix-ui/react-tooltip';
 import { AlertCircle, Calendar, CheckCircle, XCircle } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface WeekGridProps {
   result: PlanResult | null;
-  longType: string;
+  longType?: string; // Fallback only, prefer result.effectiveLongType
 }
 
 export function WeekGrid({ result, longType }: WeekGridProps) {
@@ -50,10 +51,12 @@ export function WeekGrid({ result, longType }: WeekGridProps) {
     if (!result) return 'Rest/Easy';
 
     if (day === 6) {
+      const effectiveType = result.effectiveLongType;
+      const longLabel = LONG_RULES[effectiveType]?.label || effectiveType;
       return (
         <div className="text-center">
           <div className="font-semibold text-purple-700 dark:text-purple-300">Long Run</div>
-          <div className="text-xs text-purple-600 dark:text-purple-400 mt-1">{longType}</div>
+          <div className="text-xs text-purple-600 dark:text-purple-400 mt-1">{longLabel}</div>
         </div>
       );
     }
@@ -93,7 +96,9 @@ export function WeekGrid({ result, longType }: WeekGridProps) {
     if (!result) return null;
 
     if (day === 6) {
-      return `Sunday Long Run (${longType})`;
+      const effectiveType = result.effectiveLongType;
+      const longLabel = LONG_RULES[effectiveType]?.label || effectiveType;
+      return `Sunday Long Run (${longLabel})`;
     }
 
     const quality = result.schedule[day];
@@ -124,7 +129,16 @@ export function WeekGrid({ result, longType }: WeekGridProps) {
             return (
               <Tooltip.Root key={day}>
                 <Tooltip.Trigger asChild>
-                  <div
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{
+                      duration: 0.3,
+                      delay: day * 0.05,
+                      type: "spring",
+                      stiffness: 200,
+                      damping: 20
+                    }}
                     className={`
                       p-3 rounded-lg border-2 transition-all cursor-default
                       ${getDayColor(day)}
@@ -137,18 +151,38 @@ export function WeekGrid({ result, longType }: WeekGridProps) {
                         <span className="text-xs font-bold text-gray-700 dark:text-gray-300">
                           {dayName}
                         </span>
-                        {getDayIcon(day)}
+                        <motion.div
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={{ delay: day * 0.05 + 0.2, type: "spring" }}
+                        >
+                          {getDayIcon(day)}
+                        </motion.div>
                       </div>
-                      <div className="min-h-[60px] flex items-center justify-center">
-                        {getDayContent(day)}
-                      </div>
+                      <AnimatePresence mode="wait">
+                        <motion.div
+                          key={`${day}-${result?.schedule[day] || 'empty'}`}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                          transition={{ duration: 0.2 }}
+                          className="min-h-[60px] flex items-center justify-center"
+                        >
+                          {getDayContent(day)}
+                        </motion.div>
+                      </AnimatePresence>
                       {isToday && (
-                        <div className="text-xs text-yellow-600 dark:text-yellow-400 font-medium">
+                        <motion.div
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          transition={{ delay: 0.5 }}
+                          className="text-xs text-yellow-600 dark:text-yellow-400 font-medium"
+                        >
                           TODAY
-                        </div>
+                        </motion.div>
                       )}
                     </div>
-                  </div>
+                  </motion.div>
                 </Tooltip.Trigger>
                 <Tooltip.Portal>
                   <Tooltip.Content
@@ -166,25 +200,48 @@ export function WeekGrid({ result, longType }: WeekGridProps) {
       </Tooltip.Provider>
 
       {/* Warnings */}
-      {result && result.warnings.length > 0 && (
-        <div className="mt-6 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-          <div className="flex items-start gap-2">
-            <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-500 flex-shrink-0 mt-0.5" />
-            <div>
-              <h3 className="font-medium text-amber-800 dark:text-amber-200 mb-2">
-                Couldn't fit all workouts
-              </h3>
-              <ul className="space-y-1">
-                {result.warnings.map((warning, i) => (
-                  <li key={i} className="text-sm text-amber-700 dark:text-amber-300">
-                    • {warning}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </div>
-      )}
+      <AnimatePresence>
+        {result && result.warnings.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.3 }}
+            className="mt-6 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg overflow-hidden"
+          >
+            <motion.div
+              initial={{ x: -20 }}
+              animate={{ x: 0 }}
+              className="flex items-start gap-2"
+            >
+              <motion.div
+                animate={{ rotate: [0, -10, 10, -10, 0] }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+              >
+                <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-500 flex-shrink-0 mt-0.5" />
+              </motion.div>
+              <div>
+                <h3 className="font-medium text-amber-800 dark:text-amber-200 mb-2">
+                  Couldn't fit all workouts
+                </h3>
+                <ul className="space-y-1">
+                  {result.warnings.map((warning, i) => (
+                    <motion.li
+                      key={i}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: i * 0.1 }}
+                      className="text-sm text-amber-700 dark:text-amber-300"
+                    >
+                      • {warning}
+                    </motion.li>
+                  ))}
+                </ul>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Legend */}
       <div className="mt-6 flex flex-wrap gap-4 text-xs">

@@ -29,6 +29,7 @@ export interface PlanResult {
   viableDays: DayIndex[];
   schedule: Partial<Record<DayIndex, string>>; // Mon..Sat only
   warnings: string[];
+  effectiveLongType: LongKey; // The actual long type after auto-upgrade
 }
 
 // ---------- Constants ----------
@@ -43,16 +44,62 @@ export const LONG_RULES: Readonly<Record<LongKey, LongRule>> = {
 };
 
 export const QUALITY_CATALOG: Readonly<Record<string, QualityRule>> = {
-  "Threshold (cruise/split/≤30′)": { key: "Threshold (cruise/split/≤30′)", before: 1, after: 1, weight: 2, desc: "T reps or ≤30′ continuous" },
-  "Threshold Alternations":        { key: "Threshold Alternations",          before: 2, after: 2, weight: 4, desc: "e.g., 1k T / 1k steady ×4–6" },
-  "CV / 10k (4–6×1k)":             { key: "CV / 10k (4–6×1k)",               before: 1, after: 1, weight: 2 },
-  "VO₂ Micro (30/30s)":            { key: "VO₂ Micro (30/30s)",              before: 1, after: 1, weight: 2 },
-  "VO₂ Classic (5×1k or 6×800)":   { key: "VO₂ Classic (5×1k or 6×800)",     before: 2, after: 2, weight: 4 },
-  "Reps 300–400 relaxed":          { key: "Reps 300–400 relaxed",            before: 2, after: 2, weight: 3 },
-  "Aerobic Fartlek 1′/1′":         { key: "Aerobic Fartlek 1′/1′",           before: 1, after: 1, weight: 2 },
-  "Steady 20–40′":                 { key: "Steady 20–40′",                   before: 0, after: 0, weight: 1 },
-  "Long Hills 60–90″":             { key: "Long Hills 60–90″",               before: 1, after: 1, weight: 2 },
-  "MP Alternations":               { key: "MP Alternations",                 before: 2, after: 2, weight: 4 },
+  "Medium-long easy (90–105′)": {
+    key: "Medium-long easy (90–105′)",
+    before: 0,
+    after: 1,
+    weight: 1,
+    desc: "Extended aerobic run with next-day easy buffer",
+  },
+  "Threshold (split or 25–40′ continuous)": {
+    key: "Threshold (split or 25–40′ continuous)",
+    before: 1,
+    after: 1,
+    weight: 2,
+    desc: "Steady state effort via cruise reps or continuous block",
+  },
+  "Fartlek / medium hills (e.g., 1′/1′ × 30–40′)": {
+    key: "Fartlek / medium hills (e.g., 1′/1′ × 30–40′)",
+    before: 1,
+    after: 1,
+    weight: 2,
+    desc: "Rolling fartlek or moderate hills stimulus",
+  },
+  "VO₂ micro (30/30s, 12–18′ on-time)": {
+    key: "VO₂ micro (30/30s, 12–18′ on-time)",
+    before: 1,
+    after: 1,
+    weight: 2,
+    desc: "Short VO₂ alternations capped at ~18′ on-time",
+  },
+  "MP (alternations, ~30–45′ MP total)": {
+    key: "MP (alternations, ~30–45′ MP total)",
+    before: 2,
+    after: 2,
+    weight: 4,
+    desc: "Marathon pace alternations totalling 30–45 minutes",
+  },
+  "VO₂ big (e.g., 5×1k or 6×800 @ ~5k)": {
+    key: "VO₂ big (e.g., 5×1k or 6×800 @ ~5k)",
+    before: 2,
+    after: 2,
+    weight: 4,
+    desc: "Classic VO₂ workouts with full 5k-level reps",
+  },
+  "MP big (continuous ≥45′ at MP)": {
+    key: "MP big (continuous ≥45′ at MP)",
+    before: 2,
+    after: 3,
+    weight: 5,
+    desc: "Extended marathon pace continuous effort",
+  },
+  "Long progression / MP-lite finish (last 15–25′ steady/MP-lite)": {
+    key: "Long progression / MP-lite finish (last 15–25′ steady/MP-lite)",
+    before: 2,
+    after: 2,
+    weight: 4,
+    desc: "Long run finishing steady or MP-lite for 15–25 minutes",
+  },
 };
 
 // ---------- Helpers ----------
@@ -182,7 +229,7 @@ export function planWeek(
     if (!placed) warnings.push(`Could not fit "${q.key}" given the spacing rules and long-run buffers.`);
   }
 
-  return { viableDays: candidates, schedule, warnings };
+  return { viableDays: candidates, schedule, warnings, effectiveLongType: effLongKey };
 }
 
 // ---------- Pretty helpers (optional) ----------

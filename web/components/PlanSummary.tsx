@@ -7,11 +7,13 @@ import {
   savePlan,
   loadPlans,
   deletePlan,
+  formatWeekAsText,
+  formatWeekAsMarkdown,
   type PlanInput,
   type PlanResult,
   type SavedPlan
 } from '@/lib/planner-adapter';
-import { Download, Save, History, Trash2, Activity } from 'lucide-react';
+import { Download, Save, History, Trash2, Activity, Copy, Check } from 'lucide-react';
 
 interface PlanSummaryProps {
   input: PlanInput | null;
@@ -22,14 +24,16 @@ export function PlanSummary({ input, result }: PlanSummaryProps) {
   const [notes, setNotes] = useState('');
   const [savedPlans, setSavedPlans] = useState<SavedPlan[]>([]);
   const [showHistory, setShowHistory] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [copyFormat, setCopyFormat] = useState<'text' | 'markdown'>('text');
 
   if (!input || !result) return null;
 
-  const weeklyLoad = calculateWeeklyLoad(result.schedule, input.longType);
+  const weeklyLoad = calculateWeeklyLoad(result.schedule, input.longType, result);
   const qualityCount = Object.keys(result.schedule).length;
 
   const handleExport = () => {
-    const icsContent = exportToICS(result.schedule, input.longType);
+    const icsContent = exportToICS(result.schedule, input.longType, new Date(), result);
     const blob = new Blob([icsContent], { type: 'text/calendar' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -55,6 +59,20 @@ export function PlanSummary({ input, result }: PlanSummaryProps) {
   const handleDelete = (id: string) => {
     deletePlan(id);
     setSavedPlans(loadPlans());
+  };
+
+  const handleCopy = async () => {
+    const text = copyFormat === 'markdown'
+      ? formatWeekAsMarkdown(result.schedule, input.longType, input.longDistanceMi, result)
+      : formatWeekAsText(result.schedule, input.longType, input.longDistanceMi, result);
+
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
   };
 
   const getLoadIndicator = (load: number) => {
@@ -145,27 +163,52 @@ export function PlanSummary({ input, result }: PlanSummaryProps) {
           />
         </div>
 
+        {/* Copy Format Selector */}
+        <div className="flex items-center gap-2 text-sm">
+          <span className="text-gray-600 dark:text-gray-400">Copy as:</span>
+          <button
+            onClick={() => setCopyFormat('text')}
+            className={`px-3 py-1 rounded ${copyFormat === 'text' ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'}`}
+          >
+            Text
+          </button>
+          <button
+            onClick={() => setCopyFormat('markdown')}
+            className={`px-3 py-1 rounded ${copyFormat === 'markdown' ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'}`}
+          >
+            Markdown
+          </button>
+        </div>
+
         {/* Actions */}
-        <div className="flex gap-2">
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            onClick={handleCopy}
+            className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors flex items-center justify-center gap-2"
+          >
+            {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+            {copied ? 'Copied!' : 'Copy Week'}
+          </button>
           <button
             onClick={handleExport}
-            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
           >
             <Download className="h-4 w-4" />
-            Export to Calendar
+            Calendar
           </button>
           <button
             onClick={handleSave}
-            className="flex-1 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
           >
             <Save className="h-4 w-4" />
-            Save Plan
+            Save
           </button>
           <button
             onClick={handleShowHistory}
             className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors flex items-center justify-center gap-2"
           >
             <History className="h-4 w-4" />
+            History
           </button>
         </div>
       </div>
